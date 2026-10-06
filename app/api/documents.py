@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, HTTPException
 
 
 from app.schemas.documents import DocumentUploadResponse
-
+from app.services.pdf_service import PDFExtractionError, extract_pages
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -22,7 +22,13 @@ async def upload_document(file: UploadFile) -> DocumentUploadResponse:
     if not content.startswith(b"%PDF-"):
         raise HTTPException(status_code=400, detail="File is not a valid PDF document")
     
+    try:
+        pages = extract_pages(content)
+    except PDFExtractionError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    
     return DocumentUploadResponse(
         filename=file.filename,
         size_bytes=len(content),
+        pages=pages
     )
